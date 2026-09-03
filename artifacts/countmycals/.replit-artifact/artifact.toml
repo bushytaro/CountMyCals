@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "CountMyCals"
+description = "A personal nutrition planning companion with Supabase authentication, guided onboarding, profile goals, store preferences, and a simple recipe library for validating connected data."
+version = "1.0.0"
+id = "artifacts/countmycals"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 26009
+
+[services.development]
+run = "pnpm --filter @workspace/countmycals run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/countmycals", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/countmycals/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "26009"
+BASE_PATH = "/"
