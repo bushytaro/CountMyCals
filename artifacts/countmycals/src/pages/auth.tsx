@@ -35,6 +35,12 @@ export default function AuthPage() {
         const { error } = await supabase.auth.signUp({
           email: data.email,
           password: data.password,
+          options: {
+            emailRedirectTo: new URL(
+              import.meta.env.BASE_URL,
+              window.location.origin,
+            ).toString(),
+          },
         });
         if (error) throw error;
         toast({
