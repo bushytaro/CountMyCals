@@ -113,7 +113,18 @@ function AuthConnectionError() {
   );
 }
 
-function ProfileConnectionError({ onRetry }: { onRetry: () => void }) {
+function ProfileConnectionError() {
+  const { signOut } = useAuth();
+  const [, setLocation] = useLocation();
+
+  const returnToSignIn = async () => {
+    try {
+      await signOut();
+    } finally {
+      setLocation("/");
+    }
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-6">
       <div className="max-w-md w-full bg-card rounded-2xl shadow-sm border border-border p-8 text-center space-y-5">
@@ -129,10 +140,10 @@ function ProfileConnectionError({ onRetry }: { onRetry: () => void }) {
         </p>
         <button
           type="button"
-          onClick={onRetry}
+          onClick={returnToSignIn}
           className="w-full rounded-xl bg-primary px-4 py-3 font-medium text-primary-foreground hover:opacity-90"
         >
-          Réessayer
+          Retour à la connexion
         </button>
       </div>
     </div>
@@ -168,7 +179,7 @@ function Router() {
   }
 
   if (user && isProfileError) {
-    return <ProfileConnectionError onRetry={() => void refetchProfile()} />;
+    return <ProfileConnectionError />;
   }
 
   return (
