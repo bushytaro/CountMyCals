@@ -88,9 +88,65 @@ function SetupRequired() {
   );
 }
 
+function AuthConnectionError() {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-background p-6">
+      <div className="max-w-md w-full bg-card rounded-2xl shadow-sm border border-border p-8 text-center space-y-5">
+        <div className="w-16 h-16 bg-destructive/10 rounded-full flex items-center justify-center mx-auto">
+          <BookOpen className="w-8 h-8 text-destructive" />
+        </div>
+        <h1 className="text-2xl font-serif font-medium text-foreground">
+          Connexion impossible
+        </h1>
+        <p className="text-muted-foreground leading-relaxed">
+          Supabase ne répond pas pour le moment. Vérifie ta connexion puis recharge la page.
+        </p>
+        <button
+          type="button"
+          onClick={() => window.location.reload()}
+          className="w-full rounded-xl bg-primary px-4 py-3 font-medium text-primary-foreground hover:opacity-90"
+        >
+          Recharger
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function ProfileConnectionError({ onRetry }: { onRetry: () => void }) {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-background p-6">
+      <div className="max-w-md w-full bg-card rounded-2xl shadow-sm border border-border p-8 text-center space-y-5">
+        <div className="w-16 h-16 bg-destructive/10 rounded-full flex items-center justify-center mx-auto">
+          <BookOpen className="w-8 h-8 text-destructive" />
+        </div>
+        <h1 className="text-2xl font-serif font-medium text-foreground">
+          Profil inaccessible
+        </h1>
+        <p className="text-muted-foreground leading-relaxed">
+          CountMyCals n’arrive pas à lire ton profil Supabase. Vérifie la table
+          profils_utilisateurs et ses règles RLS.
+        </p>
+        <button
+          type="button"
+          onClick={onRetry}
+          className="w-full rounded-xl bg-primary px-4 py-3 font-medium text-primary-foreground hover:opacity-90"
+        >
+          Réessayer
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function Router() {
-  const { user, isLoading } = useAuth();
-  const { data: profile, isLoading: isProfileLoading } = useProfile();
+  const { user, isLoading, authError } = useAuth();
+  const {
+    data: profile,
+    isLoading: isProfileLoading,
+    isError: isProfileError,
+    refetch: refetchProfile,
+  } = useProfile();
 
   if (!isSupabaseConfigured()) {
     return <SetupRequired />;
@@ -105,6 +161,14 @@ function Router() {
         </div>
       </div>
     );
+  }
+
+  if (authError && !user) {
+    return <AuthConnectionError />;
+  }
+
+  if (user && isProfileError) {
+    return <ProfileConnectionError onRetry={() => void refetchProfile()} />;
   }
 
   return (

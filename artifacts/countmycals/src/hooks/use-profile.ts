@@ -44,6 +44,7 @@ export function useProfile() {
       return data;
     },
     enabled: !!user && !!supabase,
+    retry: false,
   });
 }
 
