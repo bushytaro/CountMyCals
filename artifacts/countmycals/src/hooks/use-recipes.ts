@@ -5,7 +5,7 @@ export interface Recipe {
   id: string;
   name: string;
   category: string;
-  preparation_time: number;
+  preparation_time: string | null;
 }
 
 export function useRecipes() {
@@ -15,11 +15,16 @@ export function useRecipes() {
       if (!supabase) return [];
       const { data, error } = await supabase
         .from('recettes')
-        .select('*')
-        .order('name');
+        .select('id, nom, categorie, temps_preparation')
+        .order('nom');
         
       if (error) throw error;
-      return data || [];
+      return (data || []).map((recipe) => ({
+        id: recipe.id,
+        name: recipe.nom,
+        category: recipe.categorie,
+        preparation_time: recipe.temps_preparation,
+      }));
     },
     enabled: !!supabase,
   });

@@ -51,7 +51,7 @@ function ProtectedRoute({
     return <Redirect to="/" />;
   }
 
-  const isOnboardingCompleted = profile?.onboarding_completed;
+  const isOnboardingCompleted = !!profile;
 
   if (requireOnboarding && !isOnboardingCompleted) {
     return <Redirect to="/onboarding" />;
@@ -156,7 +156,6 @@ function Router() {
     data: profile,
     isLoading: isProfileLoading,
     isError: isProfileError,
-    refetch: refetchProfile,
   } = useProfile();
 
   if (!isSupabaseConfigured()) {
@@ -187,7 +186,7 @@ function Router() {
       <Switch>
         <Route path="/">
           {user ? (
-            <Redirect to={profile?.onboarding_completed ? "/dashboard" : "/onboarding"} />
+            <Redirect to={profile ? "/dashboard" : "/onboarding"} />
           ) : (
             <AuthPage />
           )}

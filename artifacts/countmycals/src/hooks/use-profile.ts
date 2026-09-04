@@ -4,7 +4,6 @@ import { useAuth } from './use-auth';
 
 export interface UserProfile {
   id: string;
-  user_id: string;
   calories_goal: number | null;
   protein_goal: number | null;
   carbs_goal: number | null;
@@ -15,12 +14,58 @@ export interface UserProfile {
   has_saucepan: boolean;
   has_pan: boolean;
   has_blender: boolean;
-  onboarding_completed: boolean;
 }
 
 export interface Store {
   id: string;
   name: string;
+}
+
+interface UserProfileRow {
+  id: string;
+  objectif_kcal: number | null;
+  objectif_proteines_g: number | null;
+  objectif_glucides_g: number | null;
+  objectif_lipides_g: number | null;
+  budget_hebdomadaire: number | null;
+  four: boolean;
+  micro_onde: boolean;
+  casserole: boolean;
+  poele: boolean;
+  mixeur: boolean;
+}
+
+function fromProfileRow(row: UserProfileRow): UserProfile {
+  return {
+    id: row.id,
+    calories_goal: row.objectif_kcal,
+    protein_goal: row.objectif_proteines_g,
+    carbs_goal: row.objectif_glucides_g,
+    fat_goal: row.objectif_lipides_g,
+    grocery_budget: row.budget_hebdomadaire,
+    has_oven: row.four,
+    has_microwave: row.micro_onde,
+    has_saucepan: row.casserole,
+    has_pan: row.poele,
+    has_blender: row.mixeur,
+  };
+}
+
+function toProfileRow(updates: Partial<UserProfile>): Partial<UserProfileRow> {
+  const row: Partial<UserProfileRow> = {};
+
+  if (updates.calories_goal !== undefined) row.objectif_kcal = updates.calories_goal;
+  if (updates.protein_goal !== undefined) row.objectif_proteines_g = updates.protein_goal;
+  if (updates.carbs_goal !== undefined) row.objectif_glucides_g = updates.carbs_goal;
+  if (updates.fat_goal !== undefined) row.objectif_lipides_g = updates.fat_goal;
+  if (updates.grocery_budget !== undefined) row.budget_hebdomadaire = updates.grocery_budget;
+  if (updates.has_oven !== undefined) row.four = updates.has_oven;
+  if (updates.has_microwave !== undefined) row.micro_onde = updates.has_microwave;
+  if (updates.has_saucepan !== undefined) row.casserole = updates.has_saucepan;
+  if (updates.has_pan !== undefined) row.poele = updates.has_pan;
+  if (updates.has_blender !== undefined) row.mixeur = updates.has_blender;
+
+  return row;
 }
 
 export function useProfile() {
@@ -34,14 +79,11 @@ export function useProfile() {
       const { data, error } = await supabase
         .from('profils_utilisateurs')
         .select('*')
-        .eq('user_id', user.id)
-        .single();
+        .eq('id', user.id)
+        .maybeSingle();
         
-      if (error) {
-        if (error.code === 'PGRST116') return null; // not found
-        throw error;
-      }
-      return data;
+      if (error) throw error;
+      return data ? fromProfileRow(data as UserProfileRow) : null;
     },
     enabled: !!user && !!supabase,
     retry: false,
@@ -55,32 +97,34 @@ export function useUpdateProfile() {
   return useMutation({
     mutationFn: async (updates: Partial<UserProfile>) => {
       if (!supabase || !user) throw new Error('Not authenticated');
+      const databaseUpdates = toProfileRow(updates);
       
-      const { data: existing } = await supabase
+      const { data: existing, error: existingError } = await supabase
         .from('profils_utilisateurs')
         .select('id')
-        .eq('user_id', user.id)
-        .single();
+        .eq('id', user.id)
+        .maybeSingle();
+      if (existingError) throw existingError;
 
       if (existing) {
         const { data, error } = await supabase
           .from('profils_utilisateurs')
-          .update(updates)
-          .eq('user_id', user.id)
+          .update(databaseUpdates)
+          .eq('id', user.id)
           .select()
           .single();
           
         if (error) throw error;
-        return data;
+        return fromProfileRow(data as UserProfileRow);
       } else {
         const { data, error } = await supabase
           .from('profils_utilisateurs')
-          .insert([{ user_id: user.id, ...updates }])
+          .insert([{ id: user.id, ...databaseUpdates }])
           .select()
           .single();
           
         if (error) throw error;
-        return data;
+        return fromProfileRow(data as UserProfileRow);
       }
     },
     onSuccess: (data) => {
@@ -94,9 +138,15 @@ export function useStores() {
     queryKey: ['stores'],
     queryFn: async (): Promise<Store[]> => {
       if (!supabase) return [];
-      const { data, error } = await supabase.from('magasins').select('*').order('name');
+      const { data, error } = await supabase
+        .from('magasins')
+        .select('id, nom')
+        .order('nom');
       if (error) throw error;
-      return data || [];
+      return (data || []).map((store) => ({
+        id: String(store.id),
+        name: store.nom,
+      }));
     },
     enabled: !!supabase,
   });
@@ -112,10 +162,10 @@ export function useUserStores() {
       const { data, error } = await supabase
         .from('utilisateur_magasins')
         .select('magasin_id')
-        .eq('user_id', user.id);
+        .eq('utilisateur_id', user.id);
         
       if (error) throw error;
-      return data.map(d => d.magasin_id);
+      return data.map(d => String(d.magasin_id));
     },
     enabled: !!user && !!supabase,
   });
@@ -132,7 +182,7 @@ export function useUpdateUserStores() {
       const { error: deleteError } = await supabase
         .from('utilisateur_magasins')
         .delete()
-        .eq('user_id', user.id);
+        .eq('utilisateur_id', user.id);
       if (deleteError) throw deleteError;
 
       // Insert new
@@ -140,7 +190,10 @@ export function useUpdateUserStores() {
         const { error } = await supabase
           .from('utilisateur_magasins')
           .insert(
-            storeIds.map(id => ({ user_id: user.id, magasin_id: id }))
+            storeIds.map(id => ({
+              utilisateur_id: user.id,
+              magasin_id: Number(id),
+            }))
           );
         if (error) throw error;
       }

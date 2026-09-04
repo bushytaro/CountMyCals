@@ -63,13 +63,12 @@ export default function OnboardingPage() {
       const stores = storesForm.getValues().storeIds;
       const budget = budgetForm.getValues();
 
-      await updateStores.mutateAsync(stores);
       await updateProfile.mutateAsync({
         ...goals,
         ...equipment,
         ...budget,
-        onboarding_completed: true,
       });
+      await updateStores.mutateAsync(stores);
 
       toast({ title: "Profile complete!", description: "Your notebook is ready." });
       setLocation("/dashboard");
