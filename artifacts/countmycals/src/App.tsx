@@ -20,6 +20,7 @@ import { useProfile } from '@/hooks/use-profile';
 import AuthPage from '@/pages/auth';
 import OnboardingPage from '@/pages/onboarding';
 import DashboardPage from '@/pages/dashboard';
+import PlanPage from '@/pages/plan';
 import RecipesPage from '@/pages/recipes';
 import ProfilePage from '@/pages/profile';
 import { Shell } from '@/components/layout/shell';
@@ -198,6 +199,9 @@ function Router() {
         {/* Protected Routes */}
         <Route path="/dashboard">
           <ProtectedRoute component={DashboardPage} />
+        </Route>
+        <Route path="/plan">
+          <ProtectedRoute component={PlanPage} />
         </Route>
         <Route path="/recettes">
           <ProtectedRoute component={RecipesPage} />

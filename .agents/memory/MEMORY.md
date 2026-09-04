@@ -1,0 +1,1 @@
+- [Hypothèses du plan hebdomadaire](meal-plan-generation-assumptions.md) — quatre créneaux persistants distincts et prix MVP global par ingrédient.

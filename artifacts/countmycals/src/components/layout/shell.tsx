@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
-import { Menu, Home, Utensils, User, LogOut, BookOpen, ChevronRight } from "lucide-react";
+import { Menu, Home, Utensils, User, LogOut, BookOpen, ChevronRight, CalendarDays } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 
@@ -11,6 +11,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
 
   const navItems = [
     { href: "/dashboard", label: "Overview", icon: Home },
+    { href: "/plan", label: "Mon Plan", icon: CalendarDays },
     { href: "/recettes", label: "Recipes", icon: Utensils },
     { href: "/profile", label: "My Profile", icon: User },
   ];

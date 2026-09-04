@@ -1,0 +1,84 @@
+# Prompt Replit #2 — Moteur de generation du plan de repas
+
+A utiliser une fois le squelette du prompt #1 fonctionnel (auth, onboarding, lecture des recettes).
+C'est la piece coeur du MVP : sans elle, l'app n'a pas de proposition de valeur.
+
+---
+
+Ajoute a l'application CountMyCals la generation automatique d'un plan de repas hebdomadaire, a partir
+du profil de l'utilisateur (`profils_utilisateurs`) et des recettes disponibles (`recettes`,
+`recette_ingredients`, `recette_sauces_compatibles`, `ingredients_canoniques`, `produits_magasin`).
+
+## 1. Structure d'une journee
+
+Chaque jour du plan comporte 4 creneaux :
+
+| Creneau | Categorie de recette | Part des kcal du jour | Part du budget du jour |
+|---|---|---|---|
+| Petit-dejeuner | Encas | 20% | 20% |
+| Dejeuner | Plat | 35% | 35% |
+| Diner | Plat | 35% | 35% |
+| Collation / Dessert | Encas | 10% | 10% |
+
+Le plan couvre 7 jours a partir d'aujourd'hui (pas besoin de gerer un alignement sur la semaine calendaire
+pour le MVP).
+
+## 2. Calcul du budget et des kcal cibles par jour
+
+- `budget_jour = profil.budget_hebdomadaire / 7`
+- `kcal_jour = profil.objectif_kcal` (l'objectif utilisateur est deja quotidien)
+- Pour chaque creneau : `kcal_cible_creneau = kcal_jour * part_kcal_du_creneau`,
+  `budget_cible_creneau = budget_jour * part_budget_du_creneau`
+
+## 3. Selection d'une recette pour un creneau
+
+1. Filtrer les recettes de la bonne categorie (`Plat` pour Dejeuner/Diner, `Encas` pour Petit-dejeuner
+   et Collation/Dessert).
+2. Exclure toute recette dont un des equipements requis (`four`, `micro_onde`, `casserole`, `poele`,
+   `mixeur`) n'est pas disponible dans le profil utilisateur.
+3. Pour chaque recette restante, tester des ratios de portion de 0.5 a 1.5 par pas de 0.1 :
+   - `kcal_test = kcal_recette_de_base(ratio) * ratio`
+   - `prix_test = prix_recette_de_base(ratio) * ratio`
+   - Si la recette est un Plat avec une sauce compatible (`recette_sauces_compatibles`) :
+     ajouter les kcal et le prix de la sauce a la recette (quantite de la sauce fixe, definie
+     dans les ingredients de la recette liee — pour le MVP il n'y a jamais plusieurs sauces
+     compatibles pour un meme plat, donc pas besoin de gerer une estimation par defaut a 80 kcal
+     ni de choix utilisateur pour cette version : prends directement la seule sauce liee si elle existe).
+4. Calculer un score pour chaque (recette, ratio) :
+   - `erreur_kcal = abs(kcal_test - kcal_cible_creneau) / kcal_cible_creneau`
+   - `erreur_budget = max(0, (prix_test - budget_cible_creneau) / budget_cible_creneau)` (seulement si on
+     depasse le budget cible, pas de penalite si on est en dessous)
+   - `score = erreur_kcal * 0.6 + erreur_budget * 0.4`
+5. Choisir la recette et le ratio avec le score le plus bas. En cas d'egalite, prendre celle qui n'a pas
+   deja ete utilisee ailleurs dans les 7 jours du plan si possible (preference de variete, pas une regle
+   stricte).
+6. Si aucune recette n'est disponible pour la categorie apres filtrage equipement (base encore petite),
+   afficher clairement le creneau comme "aucune recette compatible avec ton equipement" plutot que de
+   planter ou d'inventer une recette.
+
+## 4. Calcul du prix et des macros d'une recette
+
+- Prix d'une recette = somme, pour chaque ligne d'ingredient, de `quantite/100 * prix_100g_ingredient`
+  (convention MVP : `produits_magasin.prix_actuel` est toujours un prix pour 100g/100ml, `unite_prix = '100g'`,
+  meme logique que les macros. Un seul prix par ingredient canonique pour le MVP, pas de gestion eco/premium).
+- Kcal/proteines/glucides/lipides d'une recette = somme, pour chaque ligne d'ingredient, de
+  `quantite/100 * valeur_100g` (depuis `ingredients_canoniques`).
+- Une ligne d'ingredient sans quantite (assaisonnement a volonte) contribue 0 au prix et aux macros.
+- Le ratio de portion multiplie proportionnellement tout le resultat (prix et macros).
+
+## 5. Enregistrement et affichage
+
+- Bouton "Generer mon plan de la semaine" sur le dashboard. Au clic : supprime l'ancien plan actif de
+  l'utilisateur s'il existe (`plans_repas` + `plans_repas_items` lies), calcule le nouveau plan selon la
+  logique ci-dessus, et l'enregistre.
+- Page `/plan` qui affiche les 7 jours, avec pour chaque jour les 4 creneaux (nom de la recette, kcal,
+  prix, ratio de portion si different de 1), et en haut de page un recapitulatif : total kcal/jour moyen
+  vs objectif, total prix de la semaine vs budget.
+- Interface mobile-friendly en priorite (le trafic viendra de liens partages depuis TikTok/Instagram sur mobile).
+
+## 6. Ce qu'il ne faut PAS faire dans ce prompt
+
+- Pas de gestion de choix multiple de sauce (cf section 3, un seul cas gere pour le MVP).
+- Pas d'optimisation globale sur toute la semaine (l'algorithme reste creneau par creneau, jour par jour).
+- Pas de paiement ni de restriction d'acces a cette fonctionnalite pour l'instant (ce sera le prompt suivant).
+- Pas de scraping ni de mise a jour automatique des prix.
